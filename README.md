@@ -1,3 +1,5 @@
+![sri-lanka-pc-price-comparator](https://jpcdn.it/img/f443f5dc18884d721b04ee7e127f1548.png)
+
 # Sri Lanka PC Price Comparator
 
 A web application that searches seven Sri Lankan PC hardware stores simultaneously and presents their prices in a single, sortable table.
