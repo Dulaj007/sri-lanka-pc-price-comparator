@@ -22,13 +22,23 @@ interface StrategyCardProps {
   note: string;
   missingLabels: string[];
   variant: StrategyVariant;
+  onApply: () => void;
 }
+
+const VARIANT_BUTTON_CLASSES: Record<StrategyVariant, string> = {
+  default: "border-white/20 text-zinc-200 hover:border-white/40 hover:bg-white/5",
+  recommended: "border-black/20 text-black hover:bg-black/5",
+  warranty: "border-sky-500/30 text-sky-300 hover:bg-sky-500/10",
+  premium: "border-amber-500/30 text-amber-300 hover:bg-amber-500/10",
+};
 
 // One of the four "alternative build" cards shown once a search
 // completes - each represents the same parts list priced under a
 // different rule (cheapest overall, cheapest in stock, best warranty,
 // most expensive in stock), computed in lib/pcbuild/strategy.ts.
-export function StrategyCard({ label, total, note, missingLabels, variant }: StrategyCardProps) {
+// "Apply" swaps every block's chosen listing over to this strategy's
+// picks in one go, rather than this card being read-only.
+export function StrategyCard({ label, total, note, missingLabels, variant, onApply }: StrategyCardProps) {
   const mutedClass = variant === "recommended" ? "text-black/70" : "text-zinc-400";
 
   return (
@@ -44,6 +54,12 @@ export function StrategyCard({ label, total, note, missingLabels, variant }: Str
       {missingLabels.length > 0 && (
         <span className="text-xs text-amber-400">No stock option for: {missingLabels.join(", ")}</span>
       )}
+      <button
+        onClick={onApply}
+        className={`mt-2 w-fit rounded-full border px-3 py-1 text-xs font-medium transition-colors ${VARIANT_BUTTON_CLASSES[variant]}`}
+      >
+        Apply this build
+      </button>
     </div>
   );
 }

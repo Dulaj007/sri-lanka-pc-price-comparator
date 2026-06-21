@@ -16,13 +16,17 @@
 // points alongside whatever the user has actually picked.
 
 import type { Product } from "../types";
-import type { BuildSearchResults, ComponentCategory } from "./types";
+import type { BuildSearchResults, ChosenListings, ComponentCategory } from "./types";
 
 export interface StrategyResult {
   total: number;
   // Labels of categories that were searched but had no listing
   // matching this strategy's rule (most commonly: nothing in stock).
   missingLabels: string[];
+  // The actual listing this strategy picked for each category - lets
+  // a strategy be "applied", swapping every block over to these exact
+  // listings, rather than only ever being a read-only total.
+  picks: ChosenListings;
 }
 
 // Warranty strings look like "3 Years" or "6 Months" (see
@@ -44,6 +48,7 @@ function runStrategy(
 ): StrategyResult {
   let total = 0;
   const missingLabels: string[] = [];
+  const picks: ChosenListings = {};
 
   for (const category of categories) {
     const response = categoryResults[category.key];
@@ -52,12 +57,13 @@ function runStrategy(
     const chosen = pick(response.results);
     if (chosen) {
       total += chosen.price;
+      picks[category.key] = chosen;
     } else {
       missingLabels.push(category.label);
     }
   }
 
-  return { total, missingLabels };
+  return { total, missingLabels, picks };
 }
 
 export function cheapestOverallStrategy(

@@ -201,11 +201,11 @@ While this runs, the centre button and a readout below the canvas both show whic
 
 ### Turning several searches into one price, four different ways
 
-Each category keeps its own result list rather than being merged into one big table. As each search finishes, the cheapest listing found for that category is automatically chosen - that's what makes the running total a real, buildable number rather than an abstract estimate.
+Each category keeps its own result list rather than being merged into one big table. As each search finishes, the cheapest listing that's actually in stock right now is automatically chosen for that category - that's what makes the running total a real, buildable number rather than an abstract estimate built on listings that might be sold out.
 
 Five figures are shown once every category has been searched:
 
-- **Current build total** - the sum of whichever listing is currently chosen for each block (the cheapest one, until the user overrides it).
+- **Current build total** - the sum of whichever listing is currently chosen for each block (the cheapest in-stock one, until the user overrides it).
 - **Cheapest** - the cheapest listing found for every part, regardless of whether it's actually in stock right now.
 - **Best Value** - the cheapest listing for every part that is in stock right now.
 - **Best Warranty** - the longest warranty coverage among in-stock listings for every part, price aside.
@@ -410,7 +410,7 @@ The glowing border around the active block (`ActiveGlow.tsx`) needed to fit bloc
 
 ### Step 15 — Four reference builds from one set of results
 
-Once a search completes, `lib/pcbuild/strategy.ts` runs the same result lists through four different selection rules - cheapest regardless of stock, cheapest in stock, longest warranty in stock, and most expensive in stock - each implemented as a small filter-and-sort over the same `Product[]` arrays the build itself already has. None of them touch `chosenListings`, the state backing the user's own per-block picks; they're computed fresh on every render purely as reference figures.
+Once a search completes, `lib/pcbuild/strategy.ts` runs the same result lists through four different selection rules - cheapest regardless of stock, cheapest in stock, longest warranty in stock, and most expensive in stock - each implemented as a small filter-and-sort over the same `Product[]` arrays the build itself already has. Each strategy returns both a total and the specific listing it picked per category (`StrategyResult.picks`), so a card isn't only a number - clicking its "Apply this build" button merges those picks straight into `chosenListings`, the same state backing the user's own per-block choices. Applying a strategy doesn't touch categories it had nothing to pick for (no results, or a "None" choice), and the user can still override any individual block afterwards exactly as if they'd picked it from that block's own result list.
 
 ### Step 16 — A persistent navigation bar
 

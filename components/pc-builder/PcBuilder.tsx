@@ -324,12 +324,18 @@ export function PcBuilder() {
 
         setCategoryResults((prev) => ({ ...prev, [category.key]: data }));
 
-        // Default every block to its cheapest listing so the running
-        // total always reflects a real, buildable price. The user can
-        // override any single block afterwards.
-        const cheapest = [...data.results].sort((a, b) => a.price - b.price)[0];
-        if (cheapest) {
-          setChosenListings((prev) => ({ ...prev, [category.key]: cheapest }));
+        // Default every block to the cheapest listing that's actually
+        // in stock right now - the same rule "Best Value" uses - so the
+        // running total reflects a build that can really be bought
+        // today, not the lowest price across listings that might be
+        // sold out. Falls back to the absolute cheapest only if nothing
+        // in this category is in stock at all, so the block still gets
+        // a sensible default rather than nothing. The user can override
+        // any single block afterwards.
+        const inStockCheapest = data.results.filter((p) => p.inStock).sort((a, b) => a.price - b.price)[0];
+        const defaultChoice = inStockCheapest ?? [...data.results].sort((a, b) => a.price - b.price)[0];
+        if (defaultChoice) {
+          setChosenListings((prev) => ({ ...prev, [category.key]: defaultChoice }));
         }
       } catch {
         setCategoryResults((prev) => ({ ...prev, [category.key]: null }));
@@ -342,6 +348,14 @@ export function PcBuilder() {
 
   function handleChooseListing(key: ComponentCategoryKey, product: Product) {
     setChosenListings((prev) => ({ ...prev, [key]: product }));
+  }
+
+  // Swaps every block over to one of the four reference builds at once
+  // - only touches categories the strategy actually picked something
+  // for, so a category with no results (or "None") is left as-is
+  // rather than being cleared.
+  function handleApplyStrategy(picks: ChosenListings) {
+    setChosenListings((prev) => ({ ...prev, ...picks }));
   }
 
   // ------------------------------------------------------------------
@@ -698,6 +712,7 @@ export function PcBuilder() {
                 note="Some of these items may not be available in stock at the moment."
                 missingLabels={cheapestOverall.missingLabels}
                 variant="default"
+                onApply={() => handleApplyStrategy(cheapestOverall.picks)}
               />
               <StrategyCard
                 label="Best Value"
@@ -705,6 +720,7 @@ export function PcBuilder() {
                 note="The cheapest parts that are actually in stock right now."
                 missingLabels={bestValue.missingLabels}
                 variant="recommended"
+                onApply={() => handleApplyStrategy(bestValue.picks)}
               />
               <StrategyCard
                 label="Best Warranty"
@@ -712,6 +728,7 @@ export function PcBuilder() {
                 note="Longest warranty coverage among parts in stock now."
                 missingLabels={bestWarranty.missingLabels}
                 variant="warranty"
+                onApply={() => handleApplyStrategy(bestWarranty.picks)}
               />
               <StrategyCard
                 label="Premium"
@@ -719,6 +736,7 @@ export function PcBuilder() {
                 note="The highest-priced in-stock option for every part."
                 missingLabels={premium.missingLabels}
                 variant="premium"
+                onApply={() => handleApplyStrategy(premium.picks)}
               />
             </div>
           </div>
