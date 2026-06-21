@@ -1,0 +1,271 @@
+@import "tailwindcss";
+
+/* The app only has one theme: black, with white text and a soft white
+   glow standing in for the depth shadows would normally provide on a
+   light surface. There's no light/dark toggle to support. */
+:root {
+  --background: #000000;
+  --foreground: #f4f4f5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/* Active-block edge glow                                             */
+/* ------------------------------------------------------------------ */
+
+/* The glowing border that rings whichever build block is currently
+   active. Each edge is a thin gradient "light tube" (bright in the
+   middle, fading toward the corners) with two blurred copies behind it
+   for the soft halo. The blur alone would also fade the line's alpha
+   to almost nothing, which is what the #unopaq SVG filter (defined once
+   in app/layout.tsx) corrects for by multiplying the alpha channel back
+   up after the blur is applied.
+
+   This is the same construction a hover-triggered "glowing button"
+   effect would use - the only change here is that the outer glow layer
+   runs on a continuous keyframe fade instead of waiting for :hover,
+   since this border needs to read as "alive" without anyone touching
+   the block.
+
+   The host element (ComponentBlock's root) needs "isolation: isolate"
+   (Tailwind's `isolate` class) for this to paint correctly - without it,
+   the ::before/::after's negative z-index has no local stacking context
+   to stay contained in, and on a deeply-nested canvas like this one it
+   can end up painted behind the wrong ancestor entirely instead of just
+   behind this one block's own background. */
+.edge-glow {
+  pointer-events: none;
+  position: absolute;
+  --w: 2px;
+  --t: -40px;
+  --s: calc(var(--t) * -1);
+  --e: calc(100% + var(--t));
+  --g: rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.2) var(--s), rgba(255, 255, 255, 0.5) var(--s),
+    rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.5) var(--e), rgba(255, 255, 255, 0.2) var(--e), rgba(255, 255, 255, 0);
+}
+
+.edge-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  filter: blur(5px) url(#unopaq);
+  z-index: -2;
+}
+
+.edge-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  filter: blur(14px) url(#unopaq);
+  z-index: -2;
+  animation: edge-glow-fade 2.6s ease-in-out infinite;
+}
+
+@keyframes edge-glow-fade {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.edge-glow-l {
+  left: -2px;
+  top: var(--t);
+  bottom: var(--t);
+  width: var(--w);
+  background: linear-gradient(var(--g));
+}
+
+.edge-glow-r {
+  right: -2px;
+  top: var(--t);
+  bottom: var(--t);
+  width: var(--w);
+  background: linear-gradient(var(--g));
+}
+
+.edge-glow-t {
+  top: -2px;
+  left: var(--t);
+  right: var(--t);
+  height: var(--w);
+  background: linear-gradient(90deg, var(--g));
+}
+
+.edge-glow-b {
+  bottom: -2px;
+  left: var(--t);
+  right: var(--t);
+  height: var(--w);
+  background: linear-gradient(90deg, var(--g));
+}
+
+/* A simpler, guaranteed-to-render companion to the edge glow above: a
+   soft breathing halo around the whole card via an animated box-shadow.
+   Doesn't depend on the SVG filter or any stacking-context subtlety, so
+   the active block always reads as "selected" even on a browser that's
+   awkward about the fancier effect. */
+@keyframes active-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px -4px rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 24px 0px rgba(255, 255, 255, 0.3);
+  }
+}
+
+.active-pulse {
+  animation: active-pulse 2.6s ease-in-out infinite;
+}
+
+/* The centre search button's "in progress" treatment: an intensified
+   version of the breathing halo above, plus a comet of light chasing
+   around the rim. The conic-gradient ring sits behind the button's own
+   circular background, so only the thin rim around the edge is ever
+   visible - everything in the middle is covered. */
+@keyframes hub-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 24px -4px rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 48px 4px rgba(255, 255, 255, 0.5);
+  }
+}
+
+.hub-pulse {
+  animation: hub-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes hub-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hub-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(255, 255, 255, 0.95) 12%, transparent 28%);
+  animation: hub-spin 1.3s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Ambient page background                                            */
+/* ------------------------------------------------------------------ */
+
+/* A fixed layer sitting behind every page's content: two large, slowly
+   drifting colour blobs for depth, and a perspective-tilted grid along
+   the bottom for a sense of a "floor" receding into the distance. Pure
+   CSS - no canvas, no WebGL, just transforms and blur. */
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.ambient-glow {
+  position: absolute;
+  width: 620px;
+  height: 620px;
+  border-radius: 50%;
+  filter: blur(120px);
+}
+
+.ambient-glow-1 {
+  top: -12%;
+  left: -10%;
+  background: #4f46e5;
+  opacity: 0.22;
+  animation: ambient-drift-1 28s ease-in-out infinite;
+}
+
+.ambient-glow-2 {
+  bottom: -18%;
+  right: -10%;
+  background: #06b6d4;
+  opacity: 0.16;
+  animation: ambient-drift-2 34s ease-in-out infinite;
+}
+
+@keyframes ambient-drift-1 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(70px, 50px);
+  }
+}
+
+@keyframes ambient-drift-2 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-60px, -40px);
+  }
+}
+
+.ambient-grid {
+  /* Tile size as a custom property, read by both background-size below
+     and the scroll keyframes, so the two stay in lock-step - the
+     mobile media query only has to override this one value rather
+     than keeping a separate, easy-to-forget keyframe distance in sync
+     with it. */
+  --grid-tile: 48px;
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  bottom: 0;
+  height: 45%;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: var(--grid-tile) var(--grid-tile);
+  transform: perspective(600px) rotateX(62deg);
+  transform-origin: bottom;
+  mask-image: linear-gradient(to top, black, transparent);
+  -webkit-mask-image: linear-gradient(to top, black, transparent);
+  animation: ambient-grid-scroll 10s linear infinite;
+}
+
+/* The 45% height and 48px tiles above were sized for a wide desktop
+   canvas. On a narrow phone-width viewport that same absolute tile
+   size reads as much larger relative to the screen, and the floor
+   stretches noticeably further up the page than the rest of the UI
+   does - this scales both down to match. */
+@media (max-width: 1023px) {
+  .ambient-grid {
+    --grid-tile: 30px;
+    height: 22%;
+  }
+}
+
+@keyframes ambient-grid-scroll {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 var(--grid-tile);
+  }
+}
